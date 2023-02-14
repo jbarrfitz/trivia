@@ -1,4 +1,5 @@
 
+import { Rowdies } from '@next/font/google';
 import { google } from 'googleapis';
 
 export async function getEmojiList() {
@@ -12,25 +13,42 @@ export async function getEmojiList() {
     );
 
     const sheets = google.sheets({ version: 'v4', auth: jwt });
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: process.env.SPREADSHEET_ID,
-      range: 'emoji', // sheet name
+    const { data } = await sheets.spreadsheets.values.batchGet({
+        spreadsheetId: process.env.SPREADSHEET_ID,
+        ranges: ['Events', 'Locations']
+    });
+    if (!data.valueRanges) {
+        throw new Error('Data not returned')
+    }
+
+    const locations = data.valueRanges[1].values?.reduce((accumulator: Record<string, any>, row) => {
+        const [shortCode, name, address, area, city, state, zip, locationLink] = row;
+        accumulator[shortCode] = { shortCode, name, address, area, city, state, zip, locationLink };
+        return accumulator;
+    }, {})
+
+    // ...hosts
+
+    const events = data.valueRanges[0].values?.map((row) => {
+        const [location, date, host, recurring, cancelled] = row;
+        return { location, date, host, recurring, cancelled };
+    })
+
+    const joinedData = events?.map((event) => {
+        event.location = locations?.[event.location] || {}
+        return event;
     });
 
-    const rows = response?.data?.values || [];
-    if (rows.length) {
-      return rows.map((row) => ({
-        title: row[2],
-        subtitle: row[3],
-        code: row[4],
-        browser: row[5],
-        short_name: row[17],
-        emojipedia_slug: row[18],
-        descriptions: row[19],
-      }));
-    }
+    // console.warn(locations)
+    // console.warn(events)
+    console.warn(joinedData)
+
+    // WIP
+
+    return []
+
   } catch (err) {
     console.log(err);
+    return [];
   }
-  return [];
 }
