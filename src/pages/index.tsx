@@ -1,3 +1,4 @@
+import { GetStaticProps } from 'next';
 import Head from 'next/head'
 import {
   Container,
@@ -9,12 +10,17 @@ import {
   CardTitle,
   CardBody,
 } from 'reactstrap'
+import { fetchSchedules } from '@/lib/sheets';
 
-export default function Home() {
+interface Props {
+  schedule: Array<any>
+}
+
+export default function Home(props: Props) {
   return (
     <Container className="md-container">
       <Head>
-        <title>ReactJS with reactstrap</title>
+      <title>Quest Trivia</title>
         <link rel="icon" href="/favicon-32x32.png" />
       </Head>
       <Container>
@@ -96,4 +102,14 @@ export default function Home() {
       </footer>
     </Container>
   )
+}
+
+export async function getStaticProps(context: GetStaticProps) {
+  const schedule = await fetchSchedules();
+  return {
+    props: {
+      schedule
+    },
+    revalidate: 1, // In seconds
+  };
 }

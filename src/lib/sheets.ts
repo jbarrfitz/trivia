@@ -2,7 +2,36 @@
 import { Rowdies } from '@next/font/google';
 import { google } from 'googleapis';
 
-export async function getEmojiList() {
+interface Location {
+  shortCode: string;
+  name: string;
+  address: string;
+  area: string;
+  city: string;
+  /** 2 char state */
+  state: string;
+
+  zip: string;
+  /** Google maps URL */
+  locationLink: string;
+}
+
+interface Event {
+  location: any;
+  date: Date;
+  host: string
+  recurring: boolean;
+  cancelled: boolean;
+}
+
+interface Schedule extends Event {
+  location: string | Location;
+}
+
+/** TODO */
+const cellToBoolean = (cell: string) => Boolean(cell)
+
+export async function fetchSchedules() {
   try {
     const target = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
     const jwt = new google.auth.JWT(
@@ -21,9 +50,10 @@ export async function getEmojiList() {
         throw new Error('Data not returned')
     }
 
-    const locations = data.valueRanges[1].values?.reduce((accumulator: Record<string, any>, row) => {
+    const locations = data.valueRanges[1].values?.reduce((accumulator: Record<string, Location>, row) => {
         const [shortCode, name, address, area, city, state, zip, locationLink] = row;
-        accumulator[shortCode] = { shortCode, name, address, area, city, state, zip, locationLink };
+        const location = { shortCode, name, address, area, city, state, zip, locationLink };
+        accumulator[shortCode] = location;
         return accumulator;
     }, {})
 
@@ -31,7 +61,10 @@ export async function getEmojiList() {
 
     const events = data.valueRanges[0].values?.map((row) => {
         const [location, date, host, recurring, cancelled] = row;
-        return { location, date, host, recurring, cancelled };
+        // const [location, date, host, recurring, cancelled] = row;
+        // return { location, date, host, recurring, cancelled };
+        const event = { location, date: new Date(date), host, recurring: cellToBoolean(recurring), cancelled: cellToBoolean(cancelled) };
+        return event;
     })
 
     const joinedData = events?.map((event) => {
